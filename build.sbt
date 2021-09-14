@@ -8,7 +8,9 @@ lazy val root = project
 
     scalaVersion := scala3Version,
 
-
-
-    libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test"
+    libraryDependencies ++= Seq(
+      "org.nanohttpd" % "nanohttpd" % "2.3.1",
+      "net.sf.saxon" % "Saxon-HE" % "10.5",
+      "com.novocode" % "junit-interface" % "0.11" % "test"
+    )
   )
