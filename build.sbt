@@ -8,6 +8,8 @@ lazy val root = project
 
     scalaVersion := scala3Version,
 
+    assembly / mainClass := Some("uk.co.danielrendall.xsltserver.xsltServer"),
+
     libraryDependencies ++= Seq(
       "org.nanohttpd" % "nanohttpd" % "2.3.1",
       "net.sf.saxon" % "Saxon-HE" % "10.5",
