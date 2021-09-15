@@ -2,7 +2,7 @@ package uk.co.danielrendall.xsltserver
 
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.Response.Status
-import fi.iki.elonen.NanoHTTPD.{IHTTPSession, Response, newFixedLengthResponse}
+import fi.iki.elonen.NanoHTTPD.{IHTTPSession, MIME_PLAINTEXT, MIME_TYPES, Method, Response, newFixedLengthResponse}
 
 import javax.xml.transform.{Templates, TransformerFactory}
 import scala.collection.mutable
@@ -46,18 +46,43 @@ class XsltServerApp(port: Int) extends NanoHTTPD(port):
         if (head == Constants.QUIT) {
           quit()
         } else {
-          newFixedLengthResponse(Status.OK, "text/plain", "Hello world")
+          session.getMethod match {
+             case Method.GET => get(session, head, tail)
+             case Method.POST => post(session, head, tail)
+             case Method.PUT => put(session, head, tail)
+             case Method.DELETE => delete(session, head, tail)
+             case _ => badRequest("Unsupported method: " + session.getMethod.name())
+           }
         }
       case _ =>
         runningMessage()
     }
 
+  private def get(session: IHTTPSession, first: String, rest: List[String]) =
+    okMsg("GET " + first)
+
+  private def post(session: IHTTPSession, first: String, rest: List[String]) =
+    okMsg("POST " + first)
+
+  private def put(session: IHTTPSession, first: String, rest: List[String]) =
+    okMsg("PUT " + first)
+
+  private def delete(session: IHTTPSession, first: String, rest: List[String]) =
+    okMsg("DELETE " + first)
+
+
   private def quit(): Response =
     println("Quitting")
     stop()
-    newFixedLengthResponse(Status.OK, "text/plain", "")
+    okMsg("")
 
   private def runningMessage(): Response =
-    newFixedLengthResponse(Status.OK, "text/plain", "XsltServer is running")
+    okMsg("XsltServer is running")
+
+  private def okMsg(msg: String): Response =
+    newFixedLengthResponse(Status.OK, MIME_PLAINTEXT, msg)
+
+  private def badRequest(msg: String): Response =
+    newFixedLengthResponse(Status.BAD_REQUEST, MIME_PLAINTEXT, msg)
 
 
