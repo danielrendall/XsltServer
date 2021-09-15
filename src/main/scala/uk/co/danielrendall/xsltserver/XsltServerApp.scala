@@ -4,8 +4,13 @@ import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.Response.Status
 import fi.iki.elonen.NanoHTTPD.{IHTTPSession, MIME_PLAINTEXT, MIME_TYPES, Method, Response, newFixedLengthResponse}
 
+import java.io.{ByteArrayOutputStream, InputStream}
+import java.util
 import javax.xml.transform.{Templates, TransformerFactory}
+import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try, Using}
+import scala.jdk.CollectionConverters.MapHasAsScala
 
 /**
  * The server itself
@@ -14,6 +19,9 @@ class XsltServerApp(port: Int) extends NanoHTTPD(port):
 
   object Constants:
     val QUIT = "_quit"
+    // cURL sents an "Expect" header if the size is too big; rather than figure out how to deal with that,
+    // we impose a limit which should be safe. See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect
+    val MAX_BODY_SIZE = 8388603 // 8MB
 
   println("Server using port " + port)
 
@@ -65,11 +73,42 @@ class XsltServerApp(port: Int) extends NanoHTTPD(port):
     okMsg("POST " + first)
 
   private def put(session: IHTTPSession, first: String, rest: List[String]) =
-    okMsg("PUT " + first)
+    if (first.startsWith("_")) {
+      badRequest("Identifiers starting with underscores are reserved")
+    } else {
+      getUploadedBytes(session) match {
+        case Some(byteArrayTry) =>
+          byteArrayTry match {
+            case Success(byteArray) =>
+              okMsg("PUT " + first + " " + byteArray.size + " bytes")
+            case Failure(ex) =>
+              badRequest(ex.getMessage)
+          }
+        case None =>
+          okMsg("PUT " + first + " no bytes")
+      }
+    }
 
   private def delete(session: IHTTPSession, first: String, rest: List[String]) =
     okMsg("DELETE " + first)
 
+  private def getUploadedBytes(session: IHTTPSession): Option[Try[Array[Byte]]] =
+    val bodySize: Int = getBodySize(session)
+    if (bodySize == 0)
+      None
+    else if (bodySize >  Constants.MAX_BODY_SIZE)
+      Option(Failure(RequestTooBigException(bodySize)))
+    else
+      Option {
+        Try {
+          val baos = new ByteArrayOutputStream(bodySize)
+          StreamUtils.copy(session.getInputStream(), baos, bodySize)
+          baos.toByteArray
+        }
+      }
+
+  private def getBodySize(session: IHTTPSession): Int =
+    session.getHeaders.asScala.get("content-length").map(_.toInt).getOrElse(0)
 
   private def quit(): Response =
     println("Quitting")
