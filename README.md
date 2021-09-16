@@ -1,8 +1,25 @@
-## sbt project compiled with Scala 3
+# XSLT Server
 
-### Usage
+An experiment in Scala 3. It's a server to run XSLT transformations (any variant of XSLT supported by Saxon-HE)
 
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
+## Usage
 
-For more information on the sbt-dotty plugin, see the
-[scala3-example-project](https://github.com/scala/scala3-example-project/blob/main/README.md).
+1. Run it on some port or other (default 8080)
+2. Register one (or more) XSLTs for it to run:
+```shell
+curl -XPUT --data @my_xslt.xsl http://localhost:8080/endpoint_for_xslt
+```
+3. Post XML to it to be converted:
+```shell
+curl -XPOST --data an_xml_file.xml http://localhost:8080/endpoint_for_xslt > transformed_output.xml
+```
+4. When you're finished, tell it to quit
+```shell
+curl -XGET http://localhost:8080/_quit
+```
+
+## TODO
+
+Tests, proper documentation, deciding a license.
+
+This is _not_ intended for serious production use!
